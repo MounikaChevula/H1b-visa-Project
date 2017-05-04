@@ -1,0 +1,42 @@
+PROJECT ON HIVE
+----------------
+
+Query 1a:Is the number of petitions with Data Engineer job title increasing over time?
+=========
+
+sol:select year,count(*) from h1b_final where job_title like "%DATA ENGINEER%" group by year order by year;
+
+
+Query 3: Which industry has the most number of Data Scientist positions?
+========
+
+sol: select soc_name,job_title,count(job_title) as total from h1b_final where job_title = "DATA SCIENTIST" group by soc_name,job_title order by total desc limit 1;
+
+
+
+query 4:Which top 5 employers file the most petitions each year?
+========
+
+sol: first create a view of having this values
+     ------------------------------------------
+create view query4 as select employer_name,year,count(*) as total from h1b_final  group by year,employer_name sort by year,total desc;
+
+next run this command to get values of query
+---------------------------------------------
+
+select year,employer_name,total,rank from(select year,employer_name,rank() over (partition by year order by total desc) as rank,total from query4) ranked_table where ranked_table.rank <=5;
+
+
+Query 5:Find the most popular top 10 job positions for H1B visa applications for each year?
+========
+
+
+sol:first create a view of having this values
+    ------------------------------------------
+create view query5 as select job_title,year,count(*) as total from h1b_final group by year,job_title sort by year,total desc;
+
+next run this command to get values of query
+---------------------------------------------
+
+select year,job_title,total,rank from(select year,job_title,rank() over (partition by year order by total desc) as rank,total from query5) ranked_table where ranked_table.rank <=10;
+
