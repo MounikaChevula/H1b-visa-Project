@@ -1,0 +1,69 @@
+PROJECT
+----------
+PIG QUERIES
+
+Query 6:Find the percentage and the count of each case status on total applications for each year. Create a graph depicting the pattern of All the cases over the period of time.
+
+sol:
+----
+bag1 = load '/user/hive/warehouse/project.db/h1b_final' using PigStorage() as (s_no:int,case_status:chararray,employer_name:chararray,soc_name:chararray,job_title:chararray,full_time_position:chararray,prevailing_wage:int,year:chararray,worksite:chararray,longitude:double,latitude:double);
+bag2 = group bag1 by year;
+bag3 = foreach bag2 generate FLATTEN(group) as year,COUNT(bag1);
+bag4 = group bag1 by (case_status,year);
+bag5 = foreach bag4 generate group,COUNT(bag1) as total;
+bag5 = foreach bag5 generate FLATTEN(group),total;
+joined = join bag3 by year,bag5 by year;
+optimized = foreach joined generate $0,$1,$2,$4;
+percentage = foreach optimized generate $0,$2,ROUND_TO(((double)$3/(double)$1)*100,2) as percen;
+dump percentage;
+
+
+Query 7:Create a bar graph to depict the number of applications for each year?
+
+sol:
+----
+bag1 = load '/user/hive/warehouse/project.db/h1b_final' using PigStorage() as (s_no:int,case_status:chararray,employer_name:chararray,soc_name:chararray,job_title:chararray,full_time_position:chararray,prevailing_wage:int,year:chararray,worksite:chararray,longitude:double,latitude:double);
+bag2 = group bag1 by year;
+bag3 = foreach bag2 generate group,COUNT(bag1);
+dump bag3;
+
+
+
+Query 8: Find the average Prevailing Wage for each Job for each Year (take part time and full time separate)
+
+sol:
+----
+bag1 = load '/user/hive/warehouse/project.db/h1b_final' using PigStorage() as (s_no:int,case_status:chararray,employer_name:chararray,soc_name:chararray,job_title:chararray,full_time_position:chararray,prevailing_wage:int,year:chararray,worksite:chararray,longitude:double,latitude:double);
+bag2 = group bag1 by (year,job_title,full_time_position);
+bag3 = foreach bag2 generate group as bagcount,COUNT(bag1) as total;
+bag4 = group bag1 by (year,job_title,full_time_position);
+bag5 = foreach bag4 generate group as bagsum,SUM(bag1.prevailing_wage) as wagesum;
+bag6 = join bag3 by bagcount,bag5 by bagsum;
+bag7 = foreach bag6 generate $0,$1,$3;
+bag8 = foreach bag7 generate FLATTEN($0),(double)$2/$1;
+dump bag8;
+
+
+Query 9: Which are  employers along with the number of petitions who have the success rate more than 70%  in petitions and total petitions filed more than 1000?
+
+sol:
+----
+bag1 = load '/user/hive/warehouse/project.db/h1b_final' using PigStorage() as (s_no:int,case_status:chararray,employer_name:chararray,soc_name:chararray,job_title:chararray,full_time_position:chararray,prevailing_wage:int,year:chararray,worksite:chararray,longitude:double,latitude:double);
+total = group bag1 by employer_name;
+empcount = foreach total generate group,COUNT(bag1) as total;
+bag2 = filter empcount by $1 > 1000;
+bag3 = filter bag1 by case_status == 'CERTIFIED';
+bag3 = group bag3 by employer_name;
+bag3 = foreach bag3 generate FLATTEN(group) as employer_name,COUNT(bag3);
+bag4 = filter bag1 by case_status == 'CERTIFIED-WITHDRAWN';
+bag4 = group bag4 by employer_name;
+bag4 = foreach bag4 generate FLATTEN(group) as employer_name,COUNT(bag4);
+joined = join bag2 by $0,bag3 by $0,bag4 by $0;
+optimized = foreach joined generate $0,$1,$3,$5;
+success = foreach optimized generate $0,($2+$3)*100/$1 as  successrate;
+success = filter success by $1 > 70;
+success = ORDER success by $1 desc;
+dump success; 
+
+
+
